@@ -53,6 +53,20 @@ To show contributor ranks, you can pass a query parameter `&hide_contributor_ran
 ![Taehyun's GitHub Repository Contribution stats](https://repository-contribution-stats.vercel.app/api?username=galaxy-sea&hide=B,B%2B&hide_contributor_rank=false&limit=5)
 ```
 
+### Hiding repositories by regex
+
+To hide repositories by name, you can pass `&hide_repo_regex=` with a JavaScript regex pattern. Matched repositories will not be rendered.
+
+```md
+![Taehyun's GitHub Repository Contribution stats](https://repository-contribution-stats.vercel.app/api?username=galaxy-sea&hide_repo_regex=^test)
+```
+
+You can also pass `/pattern/flags` style values:
+
+```md
+![Taehyun's GitHub Repository Contribution stats](https://repository-contribution-stats.vercel.app/api?username=galaxy-sea&hide_repo_regex=%2Fdemo%2Fi)
+```
+
 ### Configuring the sorting order for gitHub contributor stats
 
 To specify the sorting order based on either contributions or star count or repository name length, include the &order_by= query parameter with the options `stars` or `contributions` or `length` in your request URL.

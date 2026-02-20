@@ -21,6 +21,7 @@ app.get('/api', async (req, res) => {
   const {
     username,
     hide,
+    hide_repo_regex,
     hide_title,
     hide_border,
     hide_contributor_rank,
@@ -65,6 +66,9 @@ app.get('/api', async (req, res) => {
     res.send(
       await renderContributorStatsCard(username, name, contributorStats, {
         hide: parseArray(hide),
+        hide_repo_regex: Array.isArray(hide_repo_regex)
+          ? hide_repo_regex[0]
+          : hide_repo_regex,
         hide_title: parseBoolean(hide_title),
         hide_border: parseBoolean(hide_border),
         hide_contributor_rank: parseBoolean(hide_contributor_rank),

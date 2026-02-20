@@ -43708,6 +43708,15 @@ __webpack_require__.r(__webpack_exports__);
 
 
 const token = process.env.GITHUB_PERSONAL_ACCESS_TOKEN;
+const parseRegexFromParam = (regexParam) => {
+    return new RegExp(regexParam);
+};
+const shouldHideRepo = (hideRepoRegex, repositoryNameWithOwner) => {
+    if (!hideRepoRegex)
+        return false;
+    hideRepoRegex.lastIndex = 0;
+    return hideRepoRegex.test(repositoryNameWithOwner);
+};
 const createTextNode = ({ imageBase64, name, rank, contributionRank, index, height, icon_padding_x }) => {
     const staggerDelay = (index + 3) * 150;
     const calculateTextWidth = (text) => {
@@ -43768,9 +43777,19 @@ const createTextNode = ({ imageBase64, name, rank, contributionRank, index, heig
   `;
 };
 const renderContributorStatsCard = async (username, name, contributorStats = [], options = {}) => {
-    const { hide = [], line_height = 25, hide_title = false, hide_border = false, hide_contributor_rank = true, order_by = 'stars', title_color, icon_color, text_color, bg_color, border_radius, border_color, custom_title, theme = 'default', locale, limit = -1, width, icon_padding_x, } = options;
+    const { hide = [], hide_repo_regex = '', line_height = 25, hide_title = false, hide_border = false, hide_contributor_rank = true, order_by = 'stars', title_color, icon_color, text_color, bg_color, border_radius, border_color, custom_title, theme = 'default', locale, limit = -1, width, icon_padding_x, } = options;
     const orderBy = order_by;
     const lheight = parseInt(String(line_height), 10);
+    const hideRepoRegexParam = String(hide_repo_regex || '').trim();
+    let hideRepoRegex = null;
+    if (hideRepoRegexParam) {
+        try {
+            hideRepoRegex = parseRegexFromParam(hideRepoRegexParam);
+        }
+        catch (error) {
+            throw new Error(`Invalid hide_repo_regex: ${hideRepoRegexParam}`);
+        }
+    }
     const { titleColor, textColor, iconColor, bgColor, borderColor } = (0,_common_utils__WEBPACK_IMPORTED_MODULE_5__.getCardColors)({
         title_color,
         icon_color,
@@ -43784,15 +43803,18 @@ const renderContributorStatsCard = async (username, name, contributorStats = [],
         locale,
         translations: (0,_translations__WEBPACK_IMPORTED_MODULE_7__.statCardLocales)({ name, apostrophe }),
     });
-    const imageBase64s = await Promise.all(Object.keys(contributorStats).map((key, index) => {
-        const url = new URL(contributorStats[key].owner.avatarUrl);
+    const filteredContributorStats = contributorStats.filter((contributorStat) => {
+        return !shouldHideRepo(hideRepoRegex, String(contributorStat.nameWithOwner || ''));
+    });
+    const imageBase64s = await Promise.all(Object.keys(filteredContributorStats).map((key, index) => {
+        const url = new URL(filteredContributorStats[key].owner.avatarUrl);
         url.searchParams.append('s', '50');
         return (0,_common_utils__WEBPACK_IMPORTED_MODULE_5__.getImageBase64FromURL)(url.toString());
     }));
     let allContributorsByRepo;
     if (!hide_contributor_rank) {
-        allContributorsByRepo = await Promise.all(Object.keys(contributorStats).map((key, index) => {
-            const nameWithOwner = contributorStats[key].nameWithOwner;
+        allContributorsByRepo = await Promise.all(Object.keys(filteredContributorStats).map((key, index) => {
+            const nameWithOwner = filteredContributorStats[key].nameWithOwner;
             return (0,getContributors__WEBPACK_IMPORTED_MODULE_8__.getContributors)(username, nameWithOwner, token);
         }));
     }
@@ -43809,7 +43831,7 @@ const renderContributorStatsCard = async (username, name, contributorStats = [],
         : orderBy == 'length'
             ? (a, b) => a.name.length - b.name.length
             : (a, b) => rankValues[b.contributionRank] - rankValues[a.contributionRank];
-    const transformedContributorStats = contributorStats
+    const transformedContributorStats = filteredContributorStats
         .map((contributorStat, index) => {
         const { url, name, stargazerCount, numOfMyContributions } = contributorStat;
         if (hide_contributor_rank) {
@@ -53851,7 +53873,7 @@ __webpack_require__.r(__webpack_exports__);
 const app = express__WEBPACK_IMPORTED_MODULE_5___default()();
 app.use(compression__WEBPACK_IMPORTED_MODULE_6___default()());
 app.get('/api', async (req, res) => {
-    const { username, hide, hide_title, hide_border, hide_contributor_rank, order_by, line_height, title_color, icon_color, text_color, bg_color, custom_title, border_radius, border_color, theme, cache_seconds, locale, combine_all_yearly_contributions, limit, width, icon_padding_x, } = req.query;
+    const { username, hide, hide_repo_regex, hide_title, hide_border, hide_contributor_rank, order_by, line_height, title_color, icon_color, text_color, bg_color, custom_title, border_radius, border_color, theme, cache_seconds, locale, combine_all_yearly_contributions, limit, width, icon_padding_x, } = req.query;
     res.set('Content-Type', 'image/svg+xml');
     if (locale && !(0,_translations__WEBPACK_IMPORTED_MODULE_4__.isLocaleAvailable)(locale)) {
         return res.send((0,_common_utils__WEBPACK_IMPORTED_MODULE_1__.renderError)('Something went wrong', 'Language not found'));
@@ -53866,6 +53888,9 @@ app.get('/api', async (req, res) => {
         res.setHeader('Cache-Control', `public, max-age=${cacheSeconds}`);
         res.send(await (0,_cards_stats_card__WEBPACK_IMPORTED_MODULE_0__.renderContributorStatsCard)(username, name, contributorStats, {
             hide: (0,_common_utils__WEBPACK_IMPORTED_MODULE_1__.parseArray)(hide),
+            hide_repo_regex: Array.isArray(hide_repo_regex)
+                ? hide_repo_regex[0]
+                : hide_repo_regex,
             hide_title: (0,_common_utils__WEBPACK_IMPORTED_MODULE_1__.parseBoolean)(hide_title),
             hide_border: (0,_common_utils__WEBPACK_IMPORTED_MODULE_1__.parseBoolean)(hide_border),
             hide_contributor_rank: (0,_common_utils__WEBPACK_IMPORTED_MODULE_1__.parseBoolean)(hide_contributor_rank),

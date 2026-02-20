@@ -16,6 +16,19 @@ import { Contributor, getContributors } from 'getContributors';
 
 const token = process.env.GITHUB_PERSONAL_ACCESS_TOKEN;
 
+const parseRegexFromParam = (regexParam: string) => {
+    return new RegExp(regexParam);
+};
+
+const shouldHideRepo = (
+  hideRepoRegex: RegExp | null,
+  repositoryNameWithOwner: string,
+) => {
+  if (!hideRepoRegex) return false;
+  hideRepoRegex.lastIndex = 0;
+  return hideRepoRegex.test(repositoryNameWithOwner);
+};
+
 const createTextNode = ({ imageBase64, name, rank, contributionRank, index, height, icon_padding_x }) => {
   const staggerDelay = (index + 3) * 150;
 
@@ -89,6 +102,7 @@ export const renderContributorStatsCard = async (
 ) => {
   const {
     hide = [],
+    hide_repo_regex = '',
     line_height = 25,
     hide_title = false,
     hide_border = false,
@@ -110,6 +124,15 @@ export const renderContributorStatsCard = async (
 
   const orderBy = order_by;
   const lheight = parseInt(String(line_height), 10);
+  const hideRepoRegexParam = String(hide_repo_regex || '').trim();
+  let hideRepoRegex: RegExp | null = null;
+  if (hideRepoRegexParam) {
+    try {
+      hideRepoRegex = parseRegexFromParam(hideRepoRegexParam);
+    } catch (error) {
+      throw new Error(`Invalid hide_repo_regex: ${hideRepoRegexParam}`);
+    }
+  }
 
   // returns theme based colors with proper overrides and defaults
   const { titleColor, textColor, iconColor, bgColor, borderColor } = getCardColors({
@@ -127,9 +150,16 @@ export const renderContributorStatsCard = async (
     translations: statCardLocales({ name, apostrophe }),
   });
 
+  const filteredContributorStats = contributorStats.filter((contributorStat) => {
+    return !shouldHideRepo(
+      hideRepoRegex,
+      String(contributorStat.nameWithOwner || ''),
+    );
+  });
+
   const imageBase64s = await Promise.all(
-    Object.keys(contributorStats).map((key, index) => {
-      const url = new URL(contributorStats[key].owner.avatarUrl);
+    Object.keys(filteredContributorStats).map((key, index) => {
+      const url = new URL(filteredContributorStats[key].owner.avatarUrl);
       url.searchParams.append('s', '50');
       return getImageBase64FromURL(url.toString());
     }),
@@ -138,8 +168,8 @@ export const renderContributorStatsCard = async (
   let allContributorsByRepo: Contributor[][];
   if (!hide_contributor_rank) {
     allContributorsByRepo = await Promise.all(
-      Object.keys(contributorStats).map((key, index) => {
-        const nameWithOwner = contributorStats[key].nameWithOwner;
+      Object.keys(filteredContributorStats).map((key, index) => {
+        const nameWithOwner = filteredContributorStats[key].nameWithOwner;
         return getContributors(username, nameWithOwner, token!);
       }),
     );
@@ -161,7 +191,7 @@ export const renderContributorStatsCard = async (
         ? (a, b) => a.name.length - b.name.length
         : (a, b) => rankValues[b.contributionRank] - rankValues[a.contributionRank];
 
-  const transformedContributorStats = contributorStats
+  const transformedContributorStats = filteredContributorStats
     .map((contributorStat, index) => {
       const { url, name, stargazerCount, numOfMyContributions } = contributorStat;
 
