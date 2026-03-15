@@ -346,7 +346,7 @@ export const getImageBase64FromURL = async (url: string) => {
   const buffer = await imageURLData.arrayBuffer();
   const stringifiedBuffer = Buffer.from(buffer).toString('base64');
   const contentType = imageURLData.headers.get('content-type');
-  const imageBase64 = `data:image/${contentType};base64,${stringifiedBuffer}`;
+  const imageBase64 = `data:${contentType};base64,${stringifiedBuffer}`;
   return new Promise((resolve) => {
     resolve(imageBase64);
   });
