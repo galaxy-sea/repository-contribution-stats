@@ -49,9 +49,19 @@ app.get('/api', async (req, res) => {
   }
 
   try {
-    const result = await (combine_all_yearly_contributions
-      ? fetchAllContributorStats(username)
-      : fetchContributorStats(username));
+    const githubToken = process.env.GITHUB_PERSONAL_ACCESS_TOKEN;
+    if (!githubToken) {
+      return res.send(
+        renderError(
+          'Missing GitHub token',
+          'Set GITHUB_PERSONAL_ACCESS_TOKEN as a deployment secret',
+        ),
+      );
+    }
+
+    const result = await (parseBoolean(combine_all_yearly_contributions) === true
+      ? fetchAllContributorStats(username, githubToken)
+      : fetchContributorStats(username, githubToken));
     const name = result.name;
     const contributorStats = result.repositoriesContributedTo.nodes;
 
@@ -86,6 +96,7 @@ app.get('/api', async (req, res) => {
         limit,
         width: width ? width : 495,
         icon_padding_x: icon_padding_x ? parseInt((icon_padding_x as string)) : 0,
+        githubToken,
       }),
     );
   } catch (err: any) {

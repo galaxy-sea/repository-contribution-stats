@@ -1,9 +1,5 @@
 // @ts-check
-// import imageToBase64 from 'image-to-base64';
-import imageToBase64 from 'image-to-base64/browser';
 import { themes } from 'themes';
-import fetch from 'node-fetch';
-import FileReader from 'filereader';
 
 /**
  * @param {string} message
@@ -231,8 +227,10 @@ export const getCardColors = ({
 // }
 
 const noop = () => {};
+const isTestEnvironment =
+  typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
 // return console instance based on the environment
-const logger = process.env.NODE_ENV !== 'test' ? console : { log: noop, error: noop };
+const logger = !isTestEnvironment ? console : { log: noop, error: noop };
 
 export const CONSTANTS = {
   THIRTY_MINUTES: '1800',
@@ -242,7 +240,7 @@ export const CONSTANTS = {
 };
 
 export const SECONDARY_ERROR_MESSAGES = {
-  MAX_RETRY: 'Please add an env variable called PAT_1 with your github token in vercel',
+  MAX_RETRY: 'Set GITHUB_PERSONAL_ACCESS_TOKEN as a deployment secret',
   USER_NOT_FOUND: 'Make sure the provided username is not an organization',
 };
 
@@ -341,13 +339,17 @@ function chunkArray(arr, perChunk) {
   }, []);
 }
 
-export const getImageBase64FromURL = async (url: string) => {
+export const getImageBase64FromURL = async (url: string): Promise<string> => {
   const imageURLData = await fetch(url);
-  const buffer = await imageURLData.arrayBuffer();
-  const stringifiedBuffer = Buffer.from(buffer).toString('base64');
+  const bytes = new Uint8Array(await imageURLData.arrayBuffer());
+  let binary = '';
+  for (let index = 0; index < bytes.length; index += 1) {
+    binary += String.fromCharCode(bytes[index]);
+  }
+  const stringifiedBuffer = btoa(binary);
   const contentType = imageURLData.headers.get('content-type');
   const imageBase64 = `data:${contentType};base64,${stringifiedBuffer}`;
-  return new Promise((resolve) => {
+  return new Promise<string>((resolve) => {
     resolve(imageBase64);
   });
 };

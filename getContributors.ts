@@ -1,5 +1,4 @@
 import _ from 'lodash';
-import fetch from 'node-fetch';
 
 export interface Contributor {
   login: string;
@@ -15,9 +14,11 @@ export async function getContributors(
   const page = 1;
   const url = `https://api.github.com/repos/${nameWithOwner}/contributors?page=${page}&per_page=100`;
   const response = await fetch(url, {
-    headers: { Authorization: `token ${token}` },
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'User-Agent': 'repository-contribution-stats',
+    },
   });
-  console.log(response);
 
   if (!response.ok) return [];
 

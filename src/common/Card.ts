@@ -1,6 +1,9 @@
 import { encodeHTML, flexLayout } from '@/common/utils';
 import { getAnimations } from '@/getStyles';
 
+const isTestEnvironment =
+  typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
+
 export class Card {
   width: number;
   height: number;
@@ -291,7 +294,7 @@ export class Card {
             }
             ${this.css}
 
-            ${process.env.NODE_ENV === 'test' ? '' : getAnimations()}
+            ${isTestEnvironment ? '' : getAnimations()}
             ${
               this.animations === false
                 ? `* { animation-duration: 0s !important; animation-delay: 0s !important; }`

@@ -1,5 +1,5 @@
-import axios from 'axios';
 import _ from 'lodash';
+import { requestGitHubGraphQL } from '@/githubGraphql';
 
 /**
  * The Fetch All Contributor Stats Function.
@@ -11,105 +11,68 @@ import _ from 'lodash';
  *
  * @return {*}
  */
-export async function fetchAllContributorStats(username) {
+export async function fetchAllContributorStats(username, token) {
   const {
-    data: {
-      data: {
-        user: {
-          id,
-          name,
-          contributionsCollection: { contributionYears },
-        },
-      },
+    user: {
+      name,
+      contributionsCollection: { contributionYears },
     },
-  } = await axios({
-    url: 'https://api.github.com/graphql',
-    method: 'POST',
-    headers: {
-      Authorization: `token ${process.env.GITHUB_PERSONAL_ACCESS_TOKEN}`,
-    },
-    validateStatus: (status) => status == 200,
-    data: {
-      query: `query {
-          user(login: "${username}") {
-            id
-            name
-            contributionsCollection {
-              contributionYears
+  } = await requestGitHubGraphQL<any>(
+    `query {
+      user(login: ${JSON.stringify(username)}) {
+        name
+        contributionsCollection {
+          contributionYears
+        }
+      }
+    }`,
+    token,
+  );
+
+  const yearlyContributionFields = (contributionYears as string[])
+    .map(
+      (contributionYear, index) => `
+        year${index}: contributionsCollection(from: "${contributionYear}-01-01T00:00:00Z") {
+          commitContributionsByRepository(maxRepositories: 100) {
+            contributions {
+              totalCount
+            }
+            repository {
+              owner {
+                avatarUrl
+              }
+              name
+              nameWithOwner
+              stargazerCount
             }
           }
-        }`,
-    },
-  });
+        }
+      `,
+    )
+    .join('\n');
+
+  const yearlyContributionData = await requestGitHubGraphQL<any>(
+    `query {
+      user(login: ${JSON.stringify(username)}) {
+        ${yearlyContributionFields}
+      }
+    }`,
+    token,
+  );
 
   return {
-    id,
     name,
     repositoriesContributedTo: {
       nodes: _.chain(
-        (
-          await Promise.all(
-            (contributionYears as string[]).map((contributionYear) =>
-              axios({
-                url: 'https://api.github.com/graphql',
-                method: 'POST',
-                headers: {
-                  Authorization: `token ${process.env.GITHUB_PERSONAL_ACCESS_TOKEN}`,
-                },
-                validateStatus: (status) => status == 200,
-                data: {
-                  query: `query {
-                      user(login: ${JSON.stringify(username)}) {
-                        contributionsCollection(from: "${contributionYear}-01-01T00:00:00Z") {
-                          commitContributionsByRepository(maxRepositories: 100) {
-                            contributions {
-                              totalCount
-                            } 
-                            repository {
-                              owner {
-                                id
-                                avatarUrl
-                              }
-                              isInOrganization
-                              url
-                              homepageUrl
-                              name
-                              nameWithOwner
-                              stargazerCount
-                              openGraphImageUrl
-                              defaultBranchRef {
-                                target {
-                                  ... on Commit {
-                                    history {
-                                      totalCount
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }`,
-                },
-              }),
+        Object.values(yearlyContributionData.user).flatMap(
+          ({ commitContributionsByRepository }: any) =>
+            commitContributionsByRepository.map(
+              ({ contributions, repository }) => [
+                repository.nameWithOwner,
+                repository,
+                contributions.totalCount,
+              ],
             ),
-          )
-        ).flatMap(
-          ({
-            data: {
-              data: {
-                user: {
-                  contributionsCollection: { commitContributionsByRepository },
-                },
-              },
-            },
-          }) =>
-            commitContributionsByRepository.map(({ contributions, repository }) => [
-              repository.nameWithOwner,
-              repository,
-              contributions.totalCount,
-            ]),
         ),
       )
         .groupBy(([key]) => key)

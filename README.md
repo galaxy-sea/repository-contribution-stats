@@ -113,6 +113,16 @@ You can look at a preview for [all available themes](./themes/README.md) or chec
 
 > Note: The minimum of cache_seconds is currently 4 hours as a temporary fix for PATs exhaustion.
 
+## Cloudflare Worker notes
+
+When `limit` is not provided, the Worker automatically renders as many repositories as it can while staying within Cloudflare's per-request subrequest budget. Passing `limit` still caps the rendered repository count.
+
+Avatar images are fetched and embedded as base64 in the SVG by default. This is the most compatible mode for README cards and WebViews. To skip avatar fetching and reference remote avatar URLs in the SVG instead, pass `&inline_avatar=false`.
+
+```md
+![Taehyun's GitHub Repository Contribution stats](https://repository-contribution-stats.vercel.app/api?username=galaxy-sea&inline_avatar=false)
+```
+
 
 ## Contribution
 
@@ -123,4 +133,4 @@ Made with :fire: and TypeScript.
 
 ## Address 
 - [https://repository-contribution-stats.vercel.app/api?username=galaxy-sea](https://repository-contribution-stats.vercel.app/api?username=galaxy-sea)
-- [https://repository-contribution-stats-api-proxy.wcj.plus/api?username=galaxy-sea](https://repository-contribution-stats-api-proxy.wcj.plus/api?username=galaxy-sea)(中国大陆地区 代理地址)
+- [https://repository-contribution-stats.wcj.plus/api?username=galaxy-sea](https://repository-contribution-stats.wcj.plus/api?username=galaxy-sea)(中国大陆地区 代理地址)

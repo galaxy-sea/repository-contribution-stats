@@ -7,8 +7,7 @@
  * file that was distributed with this source code.
  */
 
-import * as dotenv from 'dotenv';
-import axios from 'axios';
+import { requestGitHubGraphQL } from '@/githubGraphql';
 
 /**
  * The Fetch Contributor Stats Function.
@@ -20,56 +19,31 @@ import axios from 'axios';
  *
  * @return {*}
  */
-const fetchContributorStats = async (username) => {
-  try {
-    const response = await axios({
-      url: 'https://api.github.com/graphql',
-      method: 'POST',
-      headers: {
-        Authorization: `token ${process.env.GITHUB_PERSONAL_ACCESS_TOKEN}`,
-      },
-      data: {
-        query: `query {
-                  user(login: ${JSON.stringify(username)}) {
-                    id
-                    name
-                    repositoriesContributedTo(first :100, contributionTypes: COMMIT) {
-                      totalCount
-                      nodes {
-                        owner {
-                          id
-                          avatarUrl
-                        }
-                        isInOrganization
-                        url
-                        homepageUrl
-                        name
-                        nameWithOwner
-                        stargazerCount
-                        openGraphImageUrl
-                        defaultBranchRef {
-                          target {
-                            ... on Commit {
-                              history {
-                                totalCount
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }`,
-      },
-    });
+const fetchContributorStats = async (username, token) => {
+  const data = await requestGitHubGraphQL<any>(
+    `query {
+      user(login: ${JSON.stringify(username)}) {
+        name
+        repositoriesContributedTo(first: 100, contributionTypes: COMMIT) {
+          nodes {
+            owner {
+              avatarUrl
+            }
+            name
+            nameWithOwner
+            stargazerCount
+          }
+        }
+      }
+    }`,
+    token,
+  );
 
-    if (response.status === 200) {
-      return response.data.data.user;
-    }
-  } catch (error) {
-    console.error(error);
-    return error;
+  if (!data.user) {
+    throw new Error('User not found');
   }
+
+  return data.user;
 };
 
 export { fetchContributorStats };

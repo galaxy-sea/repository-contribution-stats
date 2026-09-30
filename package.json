@@ -6,6 +6,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack --mode development --config webpack.common.js",
+    "dev:worker": "npx --yes wrangler@4.143.0 dev",
+    "deploy:worker": "npx --yes wrangler@4.143.0 deploy",
+    "types:worker": "npx --yes wrangler@4.143.0 types",
     "start": "yarn build && node index.js"
   },
   "repository": {

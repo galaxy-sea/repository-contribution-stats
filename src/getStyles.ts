@@ -1,4 +1,7 @@
 // @ts-check
+const isTestEnvironment =
+  typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
+
 /**
  * @param {number} value
  */
@@ -95,7 +98,7 @@ export const getStyles = ({ titleColor, textColor, iconColor, show_icons, progre
       stroke-width: 3;
       opacity: 0.2;
     }
-    ${process.env.NODE_ENV === 'test' ? '' : getProgressAnimation({ progress })}
+    ${isTestEnvironment ? '' : getProgressAnimation({ progress })}
   `;
 };
 
